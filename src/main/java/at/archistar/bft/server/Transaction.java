@@ -309,9 +309,10 @@ public class Transaction implements Comparable<Transaction> {
 	}
 
 	public void merge(Transaction tmp) {
+		tmp.lock();
 		setDataFromPreprepareCommand(tmp.getSequenceNr(), tmp.getPriorSequenceNr());
-		
 		preparedCmds = tmp.getPreparedCommands();
 		commitedCmds = tmp.getCommitedCommands();
+		tmp.unlock();
 	}
 }
