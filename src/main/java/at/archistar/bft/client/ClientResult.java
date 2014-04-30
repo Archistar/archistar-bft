@@ -28,10 +28,13 @@ public class ClientResult {
 	
 	private HashMap<Integer, TransactionResult> results= new HashMap<Integer, TransactionResult>();
 	
+	/** note: always returns a locked ClientResult */
 	public ClientResult(int f, int clientId, int clientSequence) {
 		this.f = f;
 		this.clientId = clientId;
 		this.clientSequence = clientSequence;
+		
+		lock.lock();
 	}
 	
 	public boolean addResult(int clientId, int clientSequence, TransactionResult tx) throws InconsistentResultsException {
@@ -56,9 +59,10 @@ public class ClientResult {
 		return false;
 	}
 	
+	/**
+	 * note: expects ClientResult to be locked
+	 */
 	public void waitForEnoughAnswers() {
-		lock.lock();
-		
 		if (results.size() < (f+1)) {
 			try {
 				condition.await();
