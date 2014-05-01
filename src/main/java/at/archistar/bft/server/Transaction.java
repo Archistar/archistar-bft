@@ -37,20 +37,21 @@ public class Transaction implements Comparable<Transaction> {
 	
 	private Set<CommitCommand> commitedCmds = new HashSet<CommitCommand>();
 	
+	/** used for debug output (transaction lifteime) */
 	private long createdAt = System.currentTimeMillis();
 
-	/* the expected error model */
+	/** the expected error model */
 	private int f = 1;
 	
 	private Logger logger = LoggerFactory.getLogger(Transaction.class);
 
-	/* fragment id */
+	/** fragment id */
 	private String fragmentid;
 	
-	/* my sequence number (from primary) */
+	/** my sequence number (from primary) */
 	private int sequenceNr;
 	
-	/* sequence number of previous operation (from primary) */
+	/** sequence number of previous operation (from primary) */
 	private int priorSequenceNr;
 	
 	private String clientOperationId;

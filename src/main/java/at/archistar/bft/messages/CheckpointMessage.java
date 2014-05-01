@@ -18,9 +18,6 @@ public class CheckpointMessage extends IntraReplicaCommand {
 		this.executedCommands = operations;
 	}
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1125162800001556097L;
 	
 	public Integer getLastExecutedSequence() {

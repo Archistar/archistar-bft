@@ -1,8 +1,5 @@
 package at.archistar.bft.messages;
 
-import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-
 import at.archistar.bft.helper.DigestHelper;
 
 /**
@@ -42,18 +39,7 @@ public abstract class ClientCommand extends AbstractCommand {
 			return this.operationId;
 		}
 		
-		MessageDigest md = DigestHelper.createMd();
-		md.update(ByteBuffer.allocate(4).putInt(this.clientId).array());
-		md.update(ByteBuffer.allocate(4).putInt(this.clientSequence).array());
-	
-		/*
-		 * TODO: do not do this!!
-		if (payload != null) {
-			md.update(payload);
-		}*/
-		
-		this.operationId  = new String(md.digest());
-		return this.operationId;
+		return this.operationId = DigestHelper.getClientOperationId(this.clientId, this.clientSequence);
 	}
 	
 	public byte[] getPayload() {

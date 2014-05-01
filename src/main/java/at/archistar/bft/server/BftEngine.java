@@ -30,6 +30,8 @@ public class BftEngine {
     private int viewNr = 0;
     
     private int replicaId;
+    
+	private int lastCommited = -1;
      
     /** (client-side operation id) -> transaction mapping */
     private SortedMap<String, Transaction> collClientId;
@@ -43,6 +45,8 @@ public class BftEngine {
     
 	private Logger logger = LoggerFactory.getLogger(BftEngine.class);
 	
+	private DebugInformationGatherer debug;
+	
 	public BftEngine(int replicaId, int f, BftEngineCallbacks callbacks) {
 		this.callbacks = callbacks;
 		this.f = f;
@@ -50,6 +54,7 @@ public class BftEngine {
         this.collSequence = new TreeMap<Integer, Transaction>();
         this.replicaId = replicaId;
         this.checkpoints = new CheckpointManager(replicaId, callbacks, f);
+        this.debug = new DebugInformationGatherer(replicaId);
 	}
 	
 	public void processClientCommand(ClientCommand cmd) {
@@ -97,21 +102,7 @@ public class BftEngine {
 		
 		return priorSequence;
 	}
-
-	private double lifetime = 0;
-	private double count = 0;
-	private int lastCommited = -1;
 	
-	public void outputTiming() {
-		logger.info("server: {} transaction length: {}ms", this.replicaId, Math.round(lifetime/count));
-	}
-	
-	private void checkCollectionsUnlocked() {
-		if (collClientId.size() >= 100 || collSequence.size() >= 100) {
-			logger.info("server: {} collClient: {} collSequence: {}", this.replicaId, collClientId.size(), collSequence.size());
-		}
-	}
-    
 	private Transaction getTransaction(AbstractCommand msg) {
 		
 		lockCollections.lock();
@@ -228,10 +219,7 @@ public class BftEngine {
 					checkpoints.addTransaction(x, x.getResult(), viewNr);
 		
 					lastCommited  = Math.max(x.getSequenceNr(), lastCommited);
-			
-					/* This just outputs some stupid debug information about latencies */
-					count++;
-					lifetime += x.getLifetime();
+					this.debug.addFinishedTransactionStats(x.getLifetime());
 				}
 				
 				if(x.tryMarkDelete()) {
@@ -248,13 +236,15 @@ public class BftEngine {
 		this.checkpoints.addCheckpointMessage(msg);
 	}
 
-	public void outputTransactionCount() {
-		logger.info("successful transactions: {}", count);
-	}
-
+	/**
+	 * this outputs the collection count if it is over a treshold. This typically identifies
+	 * problems with the locking (or thread scheduling) code
+	 */
 	public void checkCollections() {
 		lockCollections.lock();
-		checkCollectionsUnlocked();
+		if (collClientId.size() >= 100 || collSequence.size() >= 100) {
+			logger.info("server: {} collClient: {} collSequence: {}", this.replicaId, collClientId.size(), collSequence.size());
+		}
 		lockCollections.unlock();
 	}
 
@@ -308,17 +298,12 @@ public class BftEngine {
 			checkpoints.addTransaction(t, t.getResult(), viewNr);
 		
 			lastCommited  = Math.max(t.getSequenceNr(), lastCommited);
-			
-			/* This just outputs some stupid debug information about latencies */
-			count++;
-			lifetime += t.getLifetime();
+			this.debug.addFinishedTransactionStats(t.getLifetime());
 		}
     	t.tryMarkDelete();
 	}
 
-	public void outputStates() {
-		for(Transaction t : this.collSequence.values()) {
-			t.outputState();
-		}
+	public void outputDebugInformation() {
+		this.debug.outputDebugInformation();
 	}
 }

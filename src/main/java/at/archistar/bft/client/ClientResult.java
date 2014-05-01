@@ -9,8 +9,7 @@ import at.archistar.bft.exceptions.InconsistentResultsException;
 import at.archistar.bft.messages.TransactionResult;
 
 /**
- * This class is used to transform the asynchronous client-replica
- * operations into synchronous operations.
+ * Helper class used to synchronously wait for client operation finish.
  * 
  * @author andy
  */
@@ -19,13 +18,17 @@ public class ClientResult {
 	private final Lock lock = new ReentrantLock();
 	
 	private final Condition condition = lock.newCondition();
-	
+
+	/** the configured faulty replica amount */
 	private int f;
 
+	/** our client id, used for checks */
 	private int clientId;
 	
+	/** our client (operation) sequence, used for checks */
 	private int clientSequence;
 	
+	/** map with all retrieved results */
 	private HashMap<Integer, TransactionResult> results= new HashMap<Integer, TransactionResult>();
 	
 	/** note: always returns a locked ClientResult */
@@ -37,6 +40,15 @@ public class ClientResult {
 		lock.lock();
 	}
 	
+	/**
+	 * adds a received replica anser
+	 * 
+	 * @param clientId for which client?
+	 * @param clientSequence for which sequence (== operation)?
+	 * @param tx the result
+	 * @return true if enough results for output determination were received
+	 * @throws InconsistentResultsException is thrown if there seems to be a faulty replica
+	 */
 	public boolean addResult(int clientId, int clientSequence, TransactionResult tx) throws InconsistentResultsException {
 		
 		lock.lock();
@@ -48,8 +60,8 @@ public class ClientResult {
 		}
 	
 		results.put(tx.getReplicaId(), tx);
-		/* NOTE: this condition is highly dependent upon the used secret-sharing mechanism
-		 * TODO: move this somehow into crypto engine? */
+		
+		/* NOTE: this condition is highly dependent upon the used secret-sharing mechanism */
 		if (results.size() >= (2*f+1)) {
 			condition.signal();
 			lock.unlock();
@@ -68,7 +80,7 @@ public class ClientResult {
 				condition.await();
 				lock.unlock();
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
+				assert(false);
 				e.printStackTrace();
 			}
 		}

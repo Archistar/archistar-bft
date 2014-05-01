@@ -1,7 +1,5 @@
 package at.archistar.bft.server;
 
-import java.nio.ByteBuffer;
-import java.security.MessageDigest;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -98,21 +96,8 @@ public class CheckpointManager {
 		}
 	}
 	
-	/* create a hash for the result */
-	private static String createHash(int sequence, byte[] data) {
-		
-		MessageDigest md = DigestHelper.createMd();
-		md.update(ByteBuffer.allocate(4).putInt(sequence).array());
-		if (data!= null) {
-			md.update(data);
-		}
-		
-		/* store the hash */
-		return new String(md.digest());
-	}
-	
 	public synchronized void addTransaction(Transaction t, byte[] result, int viewNr) {
-		this.collResults.put(t.getSequenceNr(), createHash(t.getSequenceNr(), result));
+		this.collResults.put(t.getSequenceNr(), DigestHelper.createResultHash(t.getSequenceNr(), result));
 		
 		if(t.getSequenceNr() % PERIOD_TIME == 0) {
 			sendCheckpointMessage(viewNr, t.getSequenceNr());
