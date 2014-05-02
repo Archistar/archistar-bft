@@ -14,9 +14,7 @@ public class TransactionResult extends ClientCommand {
 
     private static final long serialVersionUID = 7045695496206304165L;
 
-    private byte[] payload = null;
-
-    private int replicaId;
+    private final int replicaId;
 
     public TransactionResult(int clientId, int replicaId, int sequenceId, byte[] payload) {
         super(clientId, sequenceId);
@@ -30,6 +28,7 @@ public class TransactionResult extends ClientCommand {
         this.replicaId = serverid;
     }
 
+    @Override
     public String toString() {
         return getClientId() + "/" + getClientSequence();
     }

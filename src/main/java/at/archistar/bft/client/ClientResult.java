@@ -22,22 +22,22 @@ public class ClientResult {
     /**
      * the configured faulty replica amount
      */
-    private int f;
+    private final int f;
 
     /**
      * our client id, used for checks
      */
-    private int clientId;
+    private final int clientId;
 
     /**
      * our client (operation) sequence, used for checks
      */
-    private int clientSequence;
+    private final int clientSequence;
 
     /**
      * map with all retrieved results
      */
-    private HashMap<Integer, TransactionResult> results = new HashMap<Integer, TransactionResult>();
+    private final HashMap<Integer, TransactionResult> results = new HashMap<>();
 
     /**
      * note: always returns a locked ClientResult

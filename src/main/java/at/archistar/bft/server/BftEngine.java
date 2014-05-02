@@ -25,40 +25,37 @@ public class BftEngine {
 
     private int maxSequence = 0;
 
-    private int f;
+    private final int f;
 
     private int viewNr = 0;
 
-    private int replicaId;
+    private final int replicaId;
 
     private int lastCommited = -1;
 
     /**
      * (client-side operation id) -> transaction mapping
      */
-    private SortedMap<String, Transaction> collClientId;
+    private final SortedMap<String, Transaction> collClientId;
 
     /**
      * (internal id aka. sequence) -> transaction mapping
      */
-    private SortedMap<Integer, Transaction> collSequence;
+    private final SortedMap<Integer, Transaction> collSequence;
 
     final private ReentrantLock lockCollections = new ReentrantLock();
 
     private final CheckpointManager checkpoints;
 
-    private Logger logger = LoggerFactory.getLogger(BftEngine.class);
-
-    private DebugInformationGatherer debug;
+    private final Logger logger = LoggerFactory.getLogger(BftEngine.class);
 
     public BftEngine(int replicaId, int f, BftEngineCallbacks callbacks) {
         this.callbacks = callbacks;
         this.f = f;
-        this.collClientId = new TreeMap<String, Transaction>();
-        this.collSequence = new TreeMap<Integer, Transaction>();
+        this.collClientId = new TreeMap<>();
+        this.collSequence = new TreeMap<>();
         this.replicaId = replicaId;
         this.checkpoints = new CheckpointManager(replicaId, callbacks, f);
-        this.debug = new DebugInformationGatherer(replicaId);
     }
 
     public void processClientCommand(ClientCommand cmd) {
@@ -223,7 +220,6 @@ public class BftEngine {
                     checkpoints.addTransaction(x, x.getResult(), viewNr);
 
                     lastCommited = Math.max(x.getSequenceNr(), lastCommited);
-                    this.debug.addFinishedTransactionStats(x.getLifetime());
                 }
 
                 if (x.tryMarkDelete()) {
@@ -303,12 +299,7 @@ public class BftEngine {
             checkpoints.addTransaction(t, t.getResult(), viewNr);
 
             lastCommited = Math.max(t.getSequenceNr(), lastCommited);
-            this.debug.addFinishedTransactionStats(t.getLifetime());
         }
         t.tryMarkDelete();
-    }
-
-    public void outputDebugInformation() {
-        this.debug.outputDebugInformation();
     }
 }

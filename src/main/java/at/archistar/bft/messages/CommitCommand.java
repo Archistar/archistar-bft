@@ -8,6 +8,7 @@ public class CommitCommand extends IntraReplicaCommand {
         super(replicaId, sequence, viewNr);
     }
 
+    @Override
     public String toString() {
         return getSequence() + ": commit";
     }

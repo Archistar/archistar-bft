@@ -11,9 +11,9 @@ public abstract class ClientCommand extends AbstractCommand {
 
     private static final long serialVersionUID = -1195268975334641339L;
 
-    private int clientId;
+    private final int clientId;
 
-    private int clientSequence;
+    private final int clientSequence;
 
     protected byte[] payload = null;
 

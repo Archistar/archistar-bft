@@ -13,6 +13,12 @@ import org.slf4j.LoggerFactory;
 import at.archistar.bft.helper.DigestHelper;
 import at.archistar.bft.messages.CheckpointMessage;
 
+/**
+ * an instance of this class should handle all periodic checkpoint message
+ * activity. It will get notified about every completed transaction
+ * 
+ * @author andy
+ */
 public class CheckpointManager {
 
     private final Logger logger = LoggerFactory.getLogger(CheckpointManager.class);
@@ -28,7 +34,7 @@ public class CheckpointManager {
      */
     private SortedMap<Integer, String> collResults;
 
-    private SortedMap<Integer, Set<CheckpointMessage>> unstableCheckpoints;
+    private final SortedMap<Integer, Set<CheckpointMessage>> unstableCheckpoints;
 
     final private int PERIOD_TIME = 128;
 
@@ -36,8 +42,8 @@ public class CheckpointManager {
 
     public CheckpointManager(int serverId, BftEngineCallbacks callbacks, int f) {
         this.serverId = serverId;
-        this.collResults = new TreeMap<Integer, String>();
-        this.unstableCheckpoints = new TreeMap<Integer, Set<CheckpointMessage>>();
+        this.collResults = new TreeMap<>();
+        this.unstableCheckpoints = new TreeMap<>();
         this.f = f;
         this.callbacks = callbacks;
     }
@@ -59,7 +65,7 @@ public class CheckpointManager {
         if (unstableCheckpoints.containsKey(sequence)) {
             currentMessages = unstableCheckpoints.get(sequence);
         } else {
-            currentMessages = new HashSet<CheckpointMessage>();
+            currentMessages = new HashSet<>();
         }
 
         /* check if new checkpoint message fits the existing ones */
@@ -108,7 +114,7 @@ public class CheckpointManager {
 
     private void sendCheckpointMessage(int viewNr, int sequence) {
         CheckpointMessage msg = new CheckpointMessage(serverId, -10, viewNr, sequence, collResults);
-        collResults = new TreeMap<Integer, String>();
+        collResults = new TreeMap<>();
 
         addCheckpointMessageToLog(msg);
 

@@ -10,12 +10,12 @@ import at.archistar.bft.messages.TransactionResult;
 
 public class ResultManager {
 
-    private Map<Integer, ClientResult> results;
+    private final Map<Integer, ClientResult> results;
 
     private final Lock lock = new ReentrantLock();
 
     public ResultManager() {
-        this.results = new HashMap<Integer, ClientResult>();
+        this.results = new HashMap<>();
     }
 
     /**

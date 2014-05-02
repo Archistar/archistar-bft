@@ -5,9 +5,9 @@ import java.util.Map.Entry;
 
 public class CheckpointMessage extends IntraReplicaCommand {
 
-    private int lastExecutedSequence;
+    private final int lastExecutedSequence;
 
-    private Map<Integer, String> executedCommands;
+    private final Map<Integer, String> executedCommands;
 
     public CheckpointMessage(int sourceReplicaId, int sequenceId, int viewNr,
             int lastExecutedSequence, Map<Integer, String> operations) {

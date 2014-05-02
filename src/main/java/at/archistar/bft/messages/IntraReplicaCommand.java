@@ -12,17 +12,17 @@ public class IntraReplicaCommand extends AbstractCommand {
     /**
      * which replica has sent the message
      */
-    private int sourceReplicaId;
+    private final int sourceReplicaId;
 
     /**
      * what's the sequence id (should be the sequence nr of the pre-prepare
      */
-    private int sequenceId;
+    private final int sequenceId;
 
     /**
      * in which view are we in
      */
-    private int viewNr;
+    private final int viewNr;
 
     public IntraReplicaCommand(int sourceReplicaId, int sequenceId, int viewNr) {
         this.sourceReplicaId = sourceReplicaId;

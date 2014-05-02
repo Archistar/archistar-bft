@@ -10,9 +10,9 @@ public class PreprepareCommand extends IntraReplicaCommand {
 
     private static final long serialVersionUID = 5708527225627396654L;
 
-    private int priorSequence;
+    private final int priorSequence;
 
-    private String clientOperationId;
+    private final String clientOperationId;
 
     /**
      * TODO: this should be a hash over <REQUEST, o, s, c>
@@ -27,6 +27,7 @@ public class PreprepareCommand extends IntraReplicaCommand {
         this.clientOperationId = clientOperationId;
     }
 
+    @Override
     public String toString() {
         return getSequence() + "/" + clientOperationId + ": preprepare";
     }

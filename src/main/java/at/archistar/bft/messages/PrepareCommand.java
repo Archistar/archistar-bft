@@ -11,7 +11,7 @@ public class PrepareCommand extends IntraReplicaCommand {
     /**
      * message digest, used to verify message
      */
-    private String digest;
+    private final String digest;
 
     public PrepareCommand(int viewNr, int sequence, int replicaId, String digest) {
         super(replicaId, sequence, viewNr);
@@ -20,6 +20,7 @@ public class PrepareCommand extends IntraReplicaCommand {
 
     private static final long serialVersionUID = 1L;
 
+    @Override
     public String toString() {
         return getSequence() + ": prepare";
     }

@@ -38,21 +38,16 @@ public class Transaction implements Comparable<Transaction> {
     /**
      * all exchanged precommit commands, should be replicaCount
      */
-    private Set<PrepareCommand> preparedCmds = new HashSet<PrepareCommand>();
+    private Set<PrepareCommand> preparedCmds = new HashSet<>();
 
-    private Set<CommitCommand> commitedCmds = new HashSet<CommitCommand>();
-
-    /**
-     * used for debug output (transaction lifteime)
-     */
-    private long createdAt = System.currentTimeMillis();
+    private Set<CommitCommand> commitedCmds = new HashSet<>();
 
     /**
      * the expected error model
      */
     private int f = 1;
 
-    private Logger logger = LoggerFactory.getLogger(Transaction.class);
+    private final Logger logger = LoggerFactory.getLogger(Transaction.class);
 
     /**
      * fragment id
@@ -71,13 +66,13 @@ public class Transaction implements Comparable<Transaction> {
 
     private String clientOperationId;
 
-    private ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantLock();
 
     private boolean executed = false;
 
     private boolean primaryReceived = false;
 
-    private int replica;
+    private final int replica;
 
     private ClientCommand clientCmd = null;
 
@@ -128,10 +123,6 @@ public class Transaction implements Comparable<Transaction> {
         } else {
             assert (false);
         }
-    }
-
-    public float getLifetime() {
-        return ((float) (System.currentTimeMillis() - this.createdAt));
     }
 
     private boolean canAdvanceToPreprepared() {
