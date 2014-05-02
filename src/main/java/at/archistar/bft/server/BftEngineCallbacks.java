@@ -8,15 +8,15 @@ import at.archistar.bft.messages.TransactionResult;
 
 public interface BftEngineCallbacks {
 
-	void invalidMessageReceived(AbstractCommand msg);
+    void invalidMessageReceived(AbstractCommand msg);
 
-	void replicasMightBeMalicous();
+    void replicasMightBeMalicous();
 
-	void sendToReplicas(IntraReplicaCommand cmd);
-	
-	byte[] executeClientCommand(ClientCommand cmd);
+    void sendToReplicas(IntraReplicaCommand cmd);
 
-	void invalidCheckpointMessage(CheckpointMessage msg);
+    byte[] executeClientCommand(ClientCommand cmd);
 
-	void answerClient(TransactionResult transactionResult);
+    void invalidCheckpointMessage(CheckpointMessage msg);
+
+    void answerClient(TransactionResult transactionResult);
 }
