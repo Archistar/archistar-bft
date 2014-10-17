@@ -3,6 +3,11 @@ package at.archistar.bft.messages;
 import java.util.Map;
 import java.util.Map.Entry;
 
+/**
+ * checkpoint message including all remote/local operations
+ * 
+ * @author andy
+ */
 public class CheckpointMessage extends IntraReplicaCommand {
 
     private final int lastExecutedSequence;

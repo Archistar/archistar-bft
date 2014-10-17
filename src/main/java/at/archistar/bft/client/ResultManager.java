@@ -8,6 +8,12 @@ import java.util.concurrent.locks.ReentrantLock;
 import at.archistar.bft.exceptions.InconsistentResultsException;
 import at.archistar.bft.messages.TransactionResult;
 
+/**
+ * this is a manager class that collects and manages all ClientResults that
+ * were retrieved by the replicas
+ * 
+ * @author andy
+ */
 public class ResultManager {
 
     private final Map<Integer, ClientResult> results;

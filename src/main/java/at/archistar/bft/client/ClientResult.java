@@ -51,7 +51,7 @@ public class ClientResult {
     }
 
     /**
-     * adds a received replica anser
+     * adds a received replica answer
      *
      * @param clientId for which client?
      * @param clientSequence for which sequence (== operation)?

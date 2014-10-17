@@ -1,5 +1,10 @@
 package at.archistar.bft.messages;
 
+/**
+ * Commit a command through-out all BFT state machines
+ * 
+ * @author andy
+ */
 public class CommitCommand extends IntraReplicaCommand {
 
     private static final long serialVersionUID = 5922218111327104543L;

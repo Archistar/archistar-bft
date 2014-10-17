@@ -31,8 +31,8 @@ import java.util.Objects;
  */
 public class Transaction implements Comparable<Transaction> {
 
+    /** those are the possible states a transaction could be in */
     public enum State {
-
         INCOMING, PREPREPARED, PREPARED, COMMITED
     };
 

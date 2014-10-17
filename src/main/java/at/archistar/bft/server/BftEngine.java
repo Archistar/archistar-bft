@@ -19,6 +19,12 @@ import at.archistar.bft.messages.IntraReplicaCommand;
 import at.archistar.bft.messages.PrepareCommand;
 import at.archistar.bft.messages.PreprepareCommand;
 
+/**
+ * this class encapsulates a whole BFT engine (as would be seen within one
+ * replica). The whole BFT system consists of multiple distributed BFt engines
+ * 
+ * @author andy
+ */
 public class BftEngine {
 
     private final BftEngineCallbacks callbacks;
@@ -43,7 +49,7 @@ public class BftEngine {
      */
     private final SortedMap<Integer, Transaction> collSequence;
 
-    final private ReentrantLock lockCollections = new ReentrantLock();
+    private final ReentrantLock lockCollections = new ReentrantLock();
 
     private final CheckpointManager checkpoints;
 

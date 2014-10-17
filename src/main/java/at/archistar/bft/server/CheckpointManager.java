@@ -36,9 +36,9 @@ public class CheckpointManager {
 
     private final SortedMap<Integer, Set<CheckpointMessage>> unstableCheckpoints;
 
-    final private int PERIOD_TIME = 128;
+    private static final int PERIOD_TIME = 128;
 
-    final private BftEngineCallbacks callbacks;
+    private final BftEngineCallbacks callbacks;
 
     public CheckpointManager(int serverId, BftEngineCallbacks callbacks, int f) {
         this.serverId = serverId;
