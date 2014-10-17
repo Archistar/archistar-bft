@@ -25,3 +25,11 @@ Differences to other solutions
 In PBFT a client initiates an operation by sending the operation to each of the 3f+1 replicas. For our storage use-case this would mandate that an encrypted copy of the whole user dataset would be sent to each server -- thus beating privacy. Within the Archistar BFT protocol the client splits up data into 3f+1 encrypted fragments, each server only receives one of the fragments. The used secret-sharing algorithm ensures that a single replica is not able to reconstruct the plaintext.
 
 One important non-functional requirement of Archistar is a ``hackable'' code-base. As we embarked on testing different algorithms and protocols lean and agile source code was paramount. We believe in Abstract's and Aardvark's commitment to software engineering.
+
+Citing Archistar
+----------------------
+
+If you find Archistar useful for your work or if you use Archistar in a project, paper, website, etc., 
+please cite the software as
+
+T. Lorünser, A. Happe, D. Slamanig (2014). “ARCHISTAR – A framework for secure distributed storage”. GNU General Public License. http://ARCHISTAR.at
