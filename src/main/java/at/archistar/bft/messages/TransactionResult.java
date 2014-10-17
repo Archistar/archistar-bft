@@ -1,5 +1,6 @@
 package at.archistar.bft.messages;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 
 import javax.xml.bind.DatatypeConverter;
@@ -18,14 +19,16 @@ public class TransactionResult extends ClientCommand {
 
     public TransactionResult(int clientId, int replicaId, int sequenceId, byte[] payload) {
         super(clientId, sequenceId);
-        this.payload = payload;
+        if (payload != null) {
+            this.payload = payload.clone();
+        } else {
+            this.payload = null;
+        }
         this.replicaId = replicaId;
     }
 
     public TransactionResult(ClientCommand clientCmd, int serverid, byte[] payload) {
-        super(clientCmd.getClientId(), clientCmd.getClientSequence());
-        this.payload = payload;
-        this.replicaId = serverid;
+        this(clientCmd.getClientId(), serverid, clientCmd.getClientSequence(), payload);
     }
 
     @Override
@@ -42,6 +45,7 @@ public class TransactionResult extends ClientCommand {
     }
 
     @Override
+    @SuppressFBWarnings("EI_EXPOSE_REP")
     public byte[] getPayload() {
         return payload;
     }

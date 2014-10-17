@@ -30,21 +30,27 @@ public class ResultManager {
 
         ClientResult result = new ClientResult(f, clientId, clientSequence);
         lock.lock();
-        this.results.put(clientSequence, result);
-        lock.unlock();
+        try {
+            this.results.put(clientSequence, result);
+        } finally {
+            lock.unlock();
+        }
         return result;
     }
 
     public void addClientResponse(int clientId, int clientSequence, TransactionResult tx) throws InconsistentResultsException {
 
         lock.lock();
-        ClientResult result = this.results.get(clientSequence);
-
-        if (result != null) {
-            result.addResult(clientId, clientSequence, tx);
-        } else {
-            assert (false);
+        try {
+            ClientResult result = this.results.get(clientSequence);
+            
+            if (result != null) {
+                result.addResult(clientId, clientSequence, tx);
+            } else {
+                assert (false);
+            }
+        } finally {
+            lock.unlock();
         }
-        lock.unlock();
     }
 }

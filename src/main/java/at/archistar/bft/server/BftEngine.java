@@ -88,7 +88,7 @@ public class BftEngine {
     }
 
     public boolean isPrimary() {
-        return this.replicaId == (viewNr % (3f + 1));
+        return this.replicaId == (viewNr % (3*f + 1));
     }
 
     private int getPriorSequenceNumber(String fragmentId) {
@@ -106,130 +106,136 @@ public class BftEngine {
 
     private Transaction getTransaction(AbstractCommand msg) {
 
-        lockCollections.lock();
         Transaction result = null;
-
-        if (msg instanceof ClientFragmentCommand) {
-            ClientFragmentCommand c = (ClientFragmentCommand) msg;
-            String clientOperationId = c.getClientOperationId();
-
-            if (collClientId.containsKey(clientOperationId)) {
-                /* there was already a preprepare request */
-                result = collClientId.get(clientOperationId);
-            } else {
-                /* first request */
-                result = new Transaction(c, replicaId, f, this.callbacks);
-                collClientId.put(c.getClientOperationId(), result);
-            }
-
-            result.addClientCommand(c);
-
-            if (isPrimary()) {
-                result.setDataFromPreprepareCommand(maxSequence++, getPriorSequenceNumber(c.getFragmentId()));
-                collSequence.put(result.getSequenceNr(), result);
-                PreprepareCommand seq = result.createPreprepareCommand();
-                callbacks.sendToReplicas(seq);
-            }
-        } else if (msg instanceof PreprepareCommand) {
-            PreprepareCommand c = (PreprepareCommand) msg;
-
-            String clientOperationId = c.getClientOperationId();
-            int sequence = c.getSequence();
-
-            boolean knownFromClientOpId = collClientId.containsKey(clientOperationId);
-            boolean knownFromSequence = collSequence.containsKey(sequence);
-
-            if (knownFromClientOpId && knownFromSequence) {
-                result = collClientId.get(clientOperationId);
-                result.merge(collSequence.get(sequence));
-            } else if (knownFromClientOpId && !knownFromSequence) {
-                result = collClientId.get(clientOperationId);
-                result.setDataFromPreprepareCommand(sequence, c.getPriorSequence());
-            } else if (!knownFromClientOpId && knownFromSequence) {
-                result = collSequence.get(sequence);
-                result.setClientOperationId(clientOperationId);
-            } else {
-                /* initial network package */
-                result = new Transaction(c, replicaId, f, this.callbacks);
-            }
-
-            if (!isPrimary()) {
-                result.setDataFromPreprepareCommand(sequence, c.getPriorSequence());
-            }
-
-            /* after the prepare command the transaction should be known by both client-operation-id
-             * as well as by the bft-internal sequence number */
-            result.setPrepreparedReceived();
-            collSequence.put(sequence, result);
-            collClientId.put(clientOperationId, result);
-        } else if (msg instanceof PrepareCommand) {
-            PrepareCommand c = (PrepareCommand) msg;
-
-            int sequence = c.getSequence();
-
-            if (collSequence.containsKey(sequence)) {
-                result = collSequence.get(sequence);
-            } else {
-                result = new Transaction(c, replicaId, f, this.callbacks);
+        lockCollections.lock();
+        try {
+            
+            if (msg instanceof ClientFragmentCommand) {
+                ClientFragmentCommand c = (ClientFragmentCommand) msg;
+                String clientOperationId = c.getClientOperationId();
+                
+                if (collClientId.containsKey(clientOperationId)) {
+                    /* there was already a preprepare request */
+                    result = collClientId.get(clientOperationId);
+                } else {
+                    /* first request */
+                    result = new Transaction(c, replicaId, f, this.callbacks);
+                    collClientId.put(c.getClientOperationId(), result);
+                }
+                
+                result.addClientCommand(c);
+                
+                if (isPrimary()) {
+                    result.setDataFromPreprepareCommand(maxSequence++, getPriorSequenceNumber(c.getFragmentId()));
+                    collSequence.put(result.getSequenceNr(), result);
+                    PreprepareCommand seq = result.createPreprepareCommand();
+                    callbacks.sendToReplicas(seq);
+                }
+            } else if (msg instanceof PreprepareCommand) {
+                PreprepareCommand c = (PreprepareCommand) msg;
+                
+                String clientOperationId = c.getClientOperationId();
+                int sequence = c.getSequence();
+                
+                boolean knownFromClientOpId = collClientId.containsKey(clientOperationId);
+                boolean knownFromSequence = collSequence.containsKey(sequence);
+                
+                if (knownFromClientOpId && knownFromSequence) {
+                    result = collClientId.get(clientOperationId);
+                    result.merge(collSequence.get(sequence));
+                } else if (knownFromClientOpId && !knownFromSequence) {
+                    result = collClientId.get(clientOperationId);
+                    result.setDataFromPreprepareCommand(sequence, c.getPriorSequence());
+                } else if (!knownFromClientOpId && knownFromSequence) {
+                    result = collSequence.get(sequence);
+                    result.setClientOperationId(clientOperationId);
+                } else {
+                    /* initial network package */
+                    result = new Transaction(c, replicaId, f, this.callbacks);
+                }
+                
+                if (!isPrimary()) {
+                    result.setDataFromPreprepareCommand(sequence, c.getPriorSequence());
+                }
+                
+                /* after the prepare command the transaction should be known by both client-operation-id
+                * as well as by the bft-internal sequence number */
+                result.setPrepreparedReceived();
                 collSequence.put(sequence, result);
+                collClientId.put(clientOperationId, result);
+            } else if (msg instanceof PrepareCommand) {
+                PrepareCommand c = (PrepareCommand) msg;
+                
+                int sequence = c.getSequence();
+                
+                if (collSequence.containsKey(sequence)) {
+                    result = collSequence.get(sequence);
+                } else {
+                    result = new Transaction(c, replicaId, f, this.callbacks);
+                    collSequence.put(sequence, result);
+                }
+                
+                try {
+                    result.addPrepareCommand(c);
+                } catch (InconsistentResultsException e) {
+                    callbacks.replicasMightBeMalicous();
+                }
+            } else if (msg instanceof CommitCommand) {
+                CommitCommand c = (CommitCommand) msg;
+                result = collSequence.get(c.getSequence());
+                result.addCommitCommand(c);
+            } else {
+                callbacks.invalidMessageReceived(msg);
             }
-
-            try {
-                result.addPrepareCommand(c);
-            } catch (InconsistentResultsException e) {
-                callbacks.replicasMightBeMalicous();
+        
+            if (result != null) {
+                result.lock();
             }
-        } else if (msg instanceof CommitCommand) {
-            CommitCommand c = (CommitCommand) msg;
-            result = collSequence.get(c.getSequence());
-            result.addCommitCommand(c);
-        } else {
-            callbacks.invalidMessageReceived(msg);
+        } finally {
+            lockCollections.unlock();
         }
-
-        result.lock();
-
-        lockCollections.unlock();
         return result;
     }
 
     private void cleanupTransactions(Transaction mightDelete) {
 
         this.lockCollections.lock();
-
-        if (mightDelete.tryMarkDelete()) {
-            mightDelete.lock();
-            collClientId.remove(mightDelete.getClientOperationId());
-            collSequence.remove(mightDelete.getSequenceNr());
-            /* free transaction */
-            mightDelete.unlock();
-        }
-
-        /* search for preparable and commitable transactions */
-        Iterator<Transaction> it = collSequence.values().iterator();
-        while (it.hasNext()) {
-            Transaction x = it.next();
-
-            x.lock();
-
-            if (x.tryAdvanceToPrepared(lastCommited)) {
-                lastCommited = Math.max(lastCommited, x.getPriorSequenceNr());
-
-                if (x.tryAdvanceToCommited()) {
-                    /* check if we should send a CHECKPOINT message */
-                    checkpoints.addTransaction(x, x.getResult(), viewNr);
-
-                    lastCommited = Math.max(x.getSequenceNr(), lastCommited);
-                }
-
-                if (x.tryMarkDelete()) {
-                    collClientId.remove(x.getClientOperationId());
-                    it.remove();
-                }
+        try {
+            if (mightDelete.tryMarkDelete()) {
+                mightDelete.lock();
+                collClientId.remove(mightDelete.getClientOperationId());
+                collSequence.remove(mightDelete.getSequenceNr());
+                /* free transaction */
+                mightDelete.unlock();
             }
-            x.unlock();
+            
+            /* search for preparable and commitable transactions */
+            Iterator<Transaction> it = collSequence.values().iterator();
+            while (it.hasNext()) {
+                Transaction x = it.next();
+                
+                x.lock();
+                
+                if (x.tryAdvanceToPrepared(lastCommited)) {
+                    lastCommited = Math.max(lastCommited, x.getPriorSequenceNr());
+                    
+                    if (x.tryAdvanceToCommited()) {
+                        /* check if we should send a CHECKPOINT message */
+                        checkpoints.addTransaction(x, x.getResult(), viewNr);
+                        
+                        lastCommited = Math.max(x.getSequenceNr(), lastCommited);
+                    }
+                    
+                    if (x.tryMarkDelete()) {
+                        collClientId.remove(x.getClientOperationId());
+                        it.remove();
+                    }
+                }
+                x.unlock();
+            }
+        } finally {
+            this.lockCollections.unlock();
         }
-        this.lockCollections.unlock();
     }
 
     private void addCheckpointMessage(CheckpointMessage msg) {
@@ -243,45 +249,51 @@ public class BftEngine {
      */
     public void checkCollections() {
         lockCollections.lock();
-        if (collClientId.size() >= 100 || collSequence.size() >= 100) {
-            logger.info("server: {} collClient: {} collSequence: {}", this.replicaId, collClientId.size(), collSequence.size());
+        try {
+            if (collClientId.size() >= 100 || collSequence.size() >= 100) {
+                logger.info("server: {} collClient: {} collSequence: {}", this.replicaId, collClientId.size(), collSequence.size());
+            }
+        } finally {
+            lockCollections.unlock();
         }
-        lockCollections.unlock();
     }
 
     private void advanceToEra(int era) {
         lockCollections.lock();
-        if (this.viewNr <= era) {
-            logger.warn("already in era {}", era);
-        } else {
-            this.viewNr = era;
-
-            /* remove all non-client transactions and reset all client-ones */
-            Iterator<Transaction> it = collSequence.values().iterator();
-            while (it.hasNext()) {
-                Transaction t = it.next();
-
-                t.lock();
-                if (t.hasClientInteraction()) {
-                    /* sets state to INCOMING, clears collections */
-                    t.reset();
-
-                    if (isPrimary()) {
-                        this.callbacks.sendToReplicas(t.createPreprepareCommand());
-
-                        /* generates pre-prepare commands and sets state to prepared */
-                        t.tryAdvanceToPreprepared(isPrimary());
+        try {
+            if (this.viewNr <= era) {
+                logger.warn("already in era {}", era);
+            } else {
+                this.viewNr = era;
+                
+                /* remove all non-client transactions and reset all client-ones */
+                Iterator<Transaction> it = collSequence.values().iterator();
+                while (it.hasNext()) {
+                    Transaction t = it.next();
+                    
+                    t.lock();
+                    if (t.hasClientInteraction()) {
+                        /* sets state to INCOMING, clears collections */
+                        t.reset();
+                        
+                        if (isPrimary()) {
+                            this.callbacks.sendToReplicas(t.createPreprepareCommand());
+                            
+                            /* generates pre-prepare commands and sets state to prepared */
+                            t.tryAdvanceToPreprepared(isPrimary());
+                        }
+                    } else {
+                        /* delete transaction */
+                        collClientId.remove(t.getClientOperationId());
+                        it.remove();
                     }
-                } else {
-                    /* delete transaction */
-                    collClientId.remove(t.getClientOperationId());
-                    it.remove();
+                    
+                    t.unlock();
                 }
-
-                t.unlock();
             }
+        } finally {
+            lockCollections.unlock();
         }
-        lockCollections.unlock();
     }
 
     public void tryAdvanceEra() {

@@ -1,6 +1,7 @@
 package at.archistar.bft.messages;
 
 import at.archistar.bft.helper.DigestHelper;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * this is a command from the client to a replica
@@ -43,6 +44,7 @@ public abstract class ClientCommand extends AbstractCommand {
         return this.operationId = DigestHelper.getClientOperationId(this.clientId, this.clientSequence);
     }
 
+    @SuppressFBWarnings("EI_EXPOSE_REP")
     public byte[] getPayload() {
         return payload;
     }

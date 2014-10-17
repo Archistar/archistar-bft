@@ -15,6 +15,9 @@ import at.archistar.bft.messages.CommitCommand;
 import at.archistar.bft.messages.PrepareCommand;
 import at.archistar.bft.messages.PreprepareCommand;
 import at.archistar.bft.messages.TransactionResult;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * This is used to store transaction information for an operation. It contains a
@@ -205,6 +208,35 @@ public class Transaction implements Comparable<Transaction> {
     public int compareTo(Transaction o) {
         return sequenceNr - o.getSequenceNr();
     }
+    
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof Transaction) {
+            /* TODO: should we compare the transactions too? */
+            return ((Transaction)o).sequenceNr == this.sequenceNr;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 37 * hash + Objects.hashCode(this.state);
+        hash = 37 * hash + Objects.hashCode(this.preparedCmds);
+        hash = 37 * hash + Objects.hashCode(this.commitedCmds);
+        hash = 37 * hash + this.f;
+        hash = 37 * hash + Objects.hashCode(this.fragmentid);
+        hash = 37 * hash + this.sequenceNr;
+        hash = 37 * hash + this.priorSequenceNr;
+        hash = 37 * hash + Objects.hashCode(this.clientOperationId);
+        hash = 37 * hash + (this.executed ? 1 : 0);
+        hash = 37 * hash + (this.primaryReceived ? 1 : 0);
+        hash = 37 * hash + this.replica;
+        hash = 37 * hash + Objects.hashCode(this.clientCmd);
+        hash = 37 * hash + Arrays.hashCode(this.result);
+        return hash;
+    }
 
     public boolean tryMarkDelete() {
         if (state == State.COMMITED && commitedCmds.size() == (3 * f + 1)) {
@@ -304,6 +336,7 @@ public class Transaction implements Comparable<Transaction> {
         }
     }
 
+    @SuppressFBWarnings("EI_EXPOSE_REP")
     public byte[] getResult() {
         return this.result;
     }

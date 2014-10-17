@@ -63,30 +63,32 @@ public class ClientResult {
     public boolean addResult(int clientId, int clientSequence, TransactionResult tx) throws InconsistentResultsException {
 
         lock.lock();
-
-        /* consistency checks */
-        if (this.clientId != clientId || this.clientSequence != clientSequence) {
+        boolean result = false;
+        
+        try {
+            /* consistency checks */
+            if (this.clientId != clientId || this.clientSequence != clientSequence) {
+                throw new InconsistentResultsException();
+            }
+            
+            results.put(tx.getReplicaId(), tx);
+            
+            /* NOTE: this condition is highly dependent upon the used secret-sharing mechanism */
+            if (results.size() >= (2 * f + 1)) {
+                condition.signal();
+                result = true;
+            }
+        } finally {
             lock.unlock();
-            throw new InconsistentResultsException();
         }
-
-        results.put(tx.getReplicaId(), tx);
-
-        /* NOTE: this condition is highly dependent upon the used secret-sharing mechanism */
-        if (results.size() >= (2 * f + 1)) {
-            condition.signal();
-            lock.unlock();
-            return true;
-        }
-        lock.unlock();
-        return false;
+        return result;
     }
 
     /**
      * note: expects ClientResult to be locked
      */
     public void waitForEnoughAnswers() {
-        if (results.size() < (f + 1)) {
+        while (results.size() < (f + 1)) {
             try {
                 condition.await();
                 lock.unlock();
