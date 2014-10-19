@@ -94,7 +94,7 @@ public class Transaction implements Comparable<Transaction> {
             return "" + this.replica + "/" + this.sequenceNr + "/" + this.clientCmd.getClientId() + "/" + this.clientCmd.getClientSequence();
         }
     }
-
+    
     public Transaction(AbstractCommand cmd, int replicaId, int f, BftEngineCallbacks callbacks) {
 
         /* default stuff, valid for all commands */
@@ -130,6 +130,10 @@ public class Transaction implements Comparable<Transaction> {
 
     private boolean canAdvanceToPreprepared() {
         return state == State.INCOMING && clientCmd != null && primaryReceived;
+    }
+    
+    AbstractCommand getClientCommand() {
+        return this.clientCmd;
     }
 
     private boolean canAdvanceToPrepared(int lastCommited) {

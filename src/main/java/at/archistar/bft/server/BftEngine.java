@@ -8,6 +8,8 @@ import at.archistar.bft.messages.AdvanceEraCommand;
 import at.archistar.bft.messages.CheckpointMessage;
 import at.archistar.bft.messages.ClientCommand;
 import at.archistar.bft.messages.IntraReplicaCommand;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * this class encapsulates a whole BFT engine (as would be seen within one
@@ -27,21 +29,28 @@ public class BftEngine {
 
     private final Logger logger = LoggerFactory.getLogger(BftEngine.class);
     
-    private final TransactionManager transactions;
+    private TransactionManager currentEra;
+    
+    private final Set<TransactionManager> oldEras = new HashSet<>();
 
-    public BftEngine(int replicaId, int f, BftEngineCallbacks callbacks) {
+    public BftEngine(int replicaId, int viewNr, int f, BftEngineCallbacks callbacks) {
         this.callbacks = callbacks;
         this.f = f;
         this.replicaId = replicaId;
         this.checkpoints = new CheckpointManager(replicaId, callbacks, f);
-        this.transactions = new TransactionManager(replicaId, f, callbacks, checkpoints);
+        this.currentEra = new TransactionManager(replicaId, viewNr,  f, callbacks, checkpoints);
+    }
+
+    
+    public BftEngine(int replicaId, int f, BftEngineCallbacks callbacks) {
+        this(replicaId, 0, f, callbacks);
     }
 
     public void processClientCommand(ClientCommand cmd) {
-        Transaction t = this.transactions.getTransaction(cmd);
+        Transaction t = this.currentEra.getTransaction(cmd);
         handleMessage(t, cmd);
         t.unlock();
-        this.transactions.cleanupTransactions(t);
+        this.currentEra.cleanupTransactions(t);
     }
 
     public void processIntraReplicaCommand(IntraReplicaCommand cmd) {
@@ -51,23 +60,36 @@ public class BftEngine {
             if (cmd instanceof CheckpointMessage) {
                 addCheckpointMessage((CheckpointMessage) cmd);
             } else if (cmd instanceof AdvanceEraCommand) {
-                this.transactions.advanceToEra(((AdvanceEraCommand) cmd).getNewEra());
+                newEra(((AdvanceEraCommand) cmd).getNewEra());
             } else {
                 /* this locks t */
-                Transaction t = this.transactions.getTransaction(cmd);
+                Transaction t = this.currentEra.getTransaction(cmd);
                 handleMessage(t, cmd);
                 t.unlock();
-                this.transactions.cleanupTransactions(t);
+                this.currentEra.cleanupTransactions(t);
             }
         }
     }
 
     private boolean checkEraOfMessage(IntraReplicaCommand cmd) {
-        return cmd.getViewNr() >= this.transactions.getViewNr();
+        return cmd.getViewNr() >= this.currentEra.getViewNr();
     }
 
     public boolean isPrimary() {
-        return this.replicaId == (this.transactions.getViewNr() % (3*f + 1));
+        return this.replicaId == (this.currentEra.getViewNr() % (3*f + 1));
+    }
+    
+    private void newEra(int newEra) {
+        /* backup old era */
+        this.oldEras.add(currentEra);
+        
+        /* create a new era */
+        currentEra = currentEra.createNewEra(newEra);
+    }
+    
+    /** mostly to allow for stubbing */
+    TransactionManager getCurrentEra() {
+        return this.currentEra;
     }
 
     private void addCheckpointMessage(CheckpointMessage msg) {
@@ -80,24 +102,24 @@ public class BftEngine {
      * code
      */
     public void checkCollections() {
-        this.transactions.checkCollections();
+        this.currentEra.checkCollections();
     }
 
     public void tryAdvanceEra() {
-        int viewNr = this.transactions.getViewNr();
+        int viewNr = this.currentEra.getViewNr();
         AdvanceEraCommand cmd = new AdvanceEraCommand(replicaId, -1, viewNr, viewNr + 1);
         this.callbacks.sendToReplicas(cmd);
-        this.transactions.advanceToEra(viewNr + 1);
+        newEra(viewNr + 1);
     }
 
     private void handleMessage(Transaction t, AbstractCommand msg) {
 
         t.tryAdvanceToPreprepared(isPrimary());
-        t.tryAdvanceToPrepared(this.transactions.getLastCommited());
+        t.tryAdvanceToPrepared(this.currentEra.getLastCommited());
         if (t.tryAdvanceToCommited()) {
             /* check if we should send a CHECKPOINT message */
-            checkpoints.addTransaction(t, t.getResult(), this.transactions.getViewNr());
-            this.transactions.newCommited(t.getSequenceNr());
+            checkpoints.addTransaction(t, t.getResult(), this.currentEra.getViewNr());
+            this.currentEra.newCommited(t.getSequenceNr());
         }
         t.tryMarkDelete();
     }

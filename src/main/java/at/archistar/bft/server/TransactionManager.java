@@ -40,7 +40,7 @@ public class TransactionManager {
     
     private int lastCommited = -1;
     
-    private int viewNr = 0;
+    private final int viewNr;
     
     private final Logger logger = LoggerFactory.getLogger(TransactionManager.class);
 
@@ -50,15 +50,18 @@ public class TransactionManager {
     
     private final CheckpointManager checkpoints;
     
-    private boolean isPrimary;
-
-    public TransactionManager(int replicaId, int f, BftEngineCallbacks callbacks, CheckpointManager checkpoints) {
+    public TransactionManager(int replicaId, int viewNr, int f, BftEngineCallbacks callbacks, CheckpointManager checkpoints) {
         this.collClientId = new TreeMap<>();
         this.collSequence = new TreeMap<>();
         this.replicaId = replicaId;
         this.f = f;
         this.callbacks = callbacks;
         this.checkpoints = checkpoints;
+        this.viewNr = viewNr;
+    }
+    
+    public TransactionManager(int replicaId, int f, BftEngineCallbacks callbacks, CheckpointManager checkpoints) {
+        this(replicaId, 0, f, callbacks, checkpoints);
     }
     
     private Transaction handleClientFragmentCommand(ClientFragmentCommand c) {
@@ -236,44 +239,29 @@ public class TransactionManager {
         }
     }
     
-    public void advanceToEra(int era) {
+    public TransactionManager createNewEra(int era) {
         lockCollections.lock();
+        
+        TransactionManager newEra;
         try {
+            newEra = new TransactionManager(replicaId, era, f, callbacks, checkpoints);
+            
             if (this.viewNr <= era) {
                 logger.warn("already in era {}", era);
             } else {
-                this.viewNr = era;
                 
                 /* remove all non-client transactions and reset all client-ones */
-                Iterator<Transaction> it = collSequence.values().iterator();
-                while (it.hasNext()) {
-                    Transaction t = it.next();
-                    
-                    t.lock();
-                    if (t.hasClientInteraction()) {
-                        /* sets state to INCOMING, clears collections */
-                        t.reset();
-                        
-                        if (isPrimary()) {
-                            this.callbacks.sendToReplicas(t.createPreprepareCommand());
-                            
-                            /* generates pre-prepare commands and sets state to prepared */
-                            t.tryAdvanceToPreprepared(isPrimary());
-                        }
-                    } else {
-                        /* delete transaction */
-                        collClientId.remove(t.getClientOperationId());
-                        it.remove();
-                    }
-                    
-                    t.unlock();
+                for (Transaction t : collSequence.values()) {                    
+                    newEra.addTransaction(t);
                 }
             }
         } finally {
             lockCollections.unlock();
         }
+        
+        return newEra;
     }
-    
+        
     public int getLastCommited() {
         return this.lastCommited;
     }
@@ -282,11 +270,35 @@ public class TransactionManager {
         return this.viewNr;
     }
     
-    private boolean isPrimary() {
-        return this.replicaId == (getViewNr() % (3*f + 1));
+    boolean isPrimary() {
+        return this.replicaId == (viewNr % (3*f + 1));
     }
 
     void newCommited(int sequenceNr) {
         this.lastCommited = Math.max(sequenceNr, this.lastCommited);
+    }
+
+    void addTransaction(Transaction t) {
+
+        if (t.hasClientInteraction()) {
+            
+            Transaction newT = new Transaction(t.getClientCommand(), replicaId, f, callbacks);
+            
+            this.collClientId.put(newT.getClientOperationId(), newT);
+            this.collSequence.put(newT.getSequenceNr(), newT);
+
+            if (isPrimary()) {
+                this.callbacks.sendToReplicas(newT.createPreprepareCommand());
+
+                /* generates pre-prepare commands and sets state to prepared */
+                newT.tryAdvanceToPreprepared(true);
+            }
+        } else {
+            /* TODO: create copies of t */
+            
+            /* means that it will be added */
+            this.collClientId.put(t.getClientOperationId(), t);
+            this.collSequence.put(t.getSequenceNr(), t);
+        }
     }
 }

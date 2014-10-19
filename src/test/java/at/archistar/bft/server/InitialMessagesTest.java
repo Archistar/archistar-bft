@@ -1,4 +1,4 @@
-package at.archistar.bft;
+package at.archistar.bft.server;
 
 import org.junit.Test;
 
@@ -8,16 +8,14 @@ import at.archistar.bft.helper.FakeCommand;
 import at.archistar.bft.messages.ClientCommand;
 import at.archistar.bft.messages.IntraReplicaCommand;
 import at.archistar.bft.messages.PreprepareCommand;
-import at.archistar.bft.server.BftEngine;
-import at.archistar.bft.server.BftEngineCallbacks;
 
 public class InitialMessagesTest {
 
     @Test
-    public void primarySendsPreprareAfterReceivingClientMessage() {
+    public void primarySendsPrepareAfterReceivingClientMessage() {
 
         BftEngineCallbacks callbacks = mock(BftEngineCallbacks.class);
-        BftEngine primary = spy(new BftEngine(1, 1, callbacks));
+        BftEngine primary = spy(new BftEngine(1, 1, 1, callbacks));
 
         /* stub: make sure that BftEngine is primary */
         when(primary.isPrimary()).thenReturn(true);

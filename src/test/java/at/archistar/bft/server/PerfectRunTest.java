@@ -1,4 +1,4 @@
-package at.archistar.bft;
+package at.archistar.bft.server;
 
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
