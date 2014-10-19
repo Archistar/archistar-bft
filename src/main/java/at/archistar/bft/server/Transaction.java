@@ -146,10 +146,7 @@ public class Transaction implements Comparable<Transaction> {
 
     private boolean canAdvanceToCommited() {
         logger.debug("{}: {} - {}/{} - {}/{} - {}", readableId(), state, preparedCmds.size(), commitedCmds.size(), clientCmd != null, primaryReceived, priorSequenceNr);
-        if (state == State.PREPARED && commitedCmds.size() >= (2 * f + 1) && !executed) {
-            return true;
-        }
-        return false;
+        return state == State.PREPARED && commitedCmds.size() >= (2 * f + 1) && !executed;
     }
 
     public void outputState() {

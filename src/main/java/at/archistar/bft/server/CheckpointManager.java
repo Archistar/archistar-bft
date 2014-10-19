@@ -60,7 +60,7 @@ public class CheckpointManager {
     private void addCheckpointMessageToLog(CheckpointMessage msg) {
 
         int sequence = msg.getLastExecutedSequence();
-        Set<CheckpointMessage> currentMessages = null;
+        Set<CheckpointMessage> currentMessages;
 
         if (unstableCheckpoints.containsKey(sequence)) {
             currentMessages = unstableCheckpoints.get(sequence);
