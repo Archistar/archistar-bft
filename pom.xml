@@ -4,7 +4,7 @@
     <groupId>at.archistar</groupId>
     <artifactId>archistar-bft</artifactId>
     <packaging>jar</packaging>
-    <version>0.0.3</version>
+    <version>0.1-wip</version>
     <name>archistar-bft</name>
     <url>http://maven.apache.org</url>
     <repositories>
