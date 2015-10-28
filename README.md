@@ -1,3 +1,5 @@
+# Note: we're currently focusing our development effort on a new generation of the software which can also be [found on gitlab](http://github.com/Archistar/archistar-akka)
+
 archistar-bft [![Build Status](https://travis-ci.org/Archistar/archistar-bft.png?branch=master)](https://travis-ci.org/Archistar/archistar-bft)
 =============
 
